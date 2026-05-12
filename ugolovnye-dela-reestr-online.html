@@ -1,408 +1,570 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru" data-theme="light">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Реестр уголовных дел</title>
-  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root,[data-theme="light"]{
-      --text-xs:clamp(0.75rem,0.7rem + 0.25vw,0.875rem);--text-sm:clamp(0.875rem,0.8rem + 0.35vw,1rem);
-      --text-base:clamp(1rem,0.95rem + 0.25vw,1.125rem);--text-lg:clamp(1.125rem,1rem + 0.75vw,1.5rem);--text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);
-      --sp1:.25rem;--sp2:.5rem;--sp3:.75rem;--sp4:1rem;--sp5:1.25rem;--sp6:1.5rem;--sp8:2rem;
-      --bg:#f7f6f2;--surf:#f9f8f5;--surf2:#fbfbf9;--surfoff:#f3f0ec;--brd:#d4d1ca;--div:#dcd9d5;
-      --tx:#28251d;--txm:#66635e;--txf:#a7a49d;--txi:#f9f8f4;
-      --pr:#01696f;--prh:#0c4e54;--warn:#964219;--err:#a12c7b;--ok:#437a22;
-      --r-sm:.375rem;--r-md:.5rem;--r-lg:.75rem;--r-xl:1rem;
-      --sh-sm:0 1px 3px rgba(0,0,0,.07);--sh-md:0 6px 20px rgba(0,0,0,.09);--sh-lg:0 16px 48px rgba(0,0,0,.14);
-      --font:'Satoshi',system-ui,sans-serif;
+    :root {
+      --bg: #faf8f5;
+      --surface: #ffffff;
+      --text: #2c2416;
+      --text-secondary: #6b5e4a;
+      --accent: #1a7f6e;
+      --accent-hover: #156658;
+      --danger: #b91c1c;
+      --warning: #d97706;
+      --border: #e4d9c5;
+      --shadow: 0 4px 12px rgba(0,0,0,0.05);
+      --radius: 12px;
+      --transition: 0.2s ease;
     }
-    [data-theme="dark"]{--bg:#171614;--surf:#1c1b19;--surf2:#201f1d;--surfoff:#252422;--brd:#393836;--div:#262523;--tx:#cdccca;--txm:#a2a09b;--txf:#6b6965;--txi:#2b2a28;--pr:#4f98a3;--prh:#227f8b;--warn:#bb653b;--err:#d163a7;--ok:#6daa45;--sh-sm:0 1px 3px rgba(0,0,0,.25);--sh-md:0 8px 24px rgba(0,0,0,.35);--sh-lg:0 20px 60px rgba(0,0,0,.5);}
-    *{box-sizing:border-box}html,body{margin:0;height:100%}
-    body{font-family:var(--font);font-size:var(--text-base);background:var(--bg);color:var(--tx)}
-    .app{display:grid;grid-template-columns:270px 1fr;height:100dvh;overflow:hidden}
-    .sidebar{background:var(--surf);border-right:1px solid var(--brd);padding:var(--sp5);display:flex;flex-direction:column;gap:var(--sp5);overflow-y:auto}
-    .logo{display:flex;align-items:center;gap:var(--sp3);font-weight:700}
-    .logo svg{width:32px;height:32px;color:var(--pr);flex-shrink:0}
-    .main{display:grid;grid-template-rows:auto 1fr;min-width:0}
-    .topbar{display:flex;justify-content:space-between;align-items:center;gap:var(--sp4);padding:var(--sp4) var(--sp6);border-bottom:1px solid var(--brd);background:var(--surf);flex-wrap:wrap}
-    .content{overflow:auto;padding:var(--sp5);display:grid;gap:var(--sp5);align-content:start}
-    .panel{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r-xl);box-shadow:var(--sh-sm)}
-    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp4)}
-    .stat{padding:var(--sp5)}.stat-k{font-size:var(--text-xs);color:var(--txm);margin-bottom:var(--sp2)}.stat-v{font-size:var(--text-xl);font-weight:700}
-    .filters{padding:var(--sp5);display:grid;gap:var(--sp4)}
-    .fgrid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:var(--sp3);align-items:end}
-    label{font-size:var(--text-xs);color:var(--txm);display:block;margin-bottom:var(--sp2)}
-    input,select,textarea{width:100%;padding:.7rem .85rem;border-radius:var(--r-md);border:1px solid var(--brd);background:var(--surf2);color:var(--tx);font-family:inherit;font-size:var(--text-sm)}
-    input:focus,select:focus,textarea:focus{outline:2px solid var(--pr);outline-offset:2px;border-color:var(--pr)}
-    button{border:none;border-radius:var(--r-md);padding:.7rem 1.1rem;font-weight:600;cursor:pointer;font-family:inherit;font-size:var(--text-sm);transition:background .15s,transform .1s}
-    button:active{transform:scale(.97)}
-    .btn-p{background:var(--pr);color:var(--txi)}.btn-p:hover{background:var(--prh)}
-    .btn-g{background:var(--surfoff);color:var(--tx)}.btn-g:hover{background:var(--brd)}
-    .btn-d{background:color-mix(in srgb,var(--err) 12%,var(--surf));color:var(--err)}.btn-d:hover{background:color-mix(in srgb,var(--err) 20%,var(--surf))}
-    .chips{display:flex;flex-wrap:wrap;gap:var(--sp2)}
-    .chip{padding:.38rem .65rem;border-radius:999px;background:var(--surfoff);border:1px solid var(--brd);font-size:var(--text-xs);cursor:pointer;transition:all .15s}
-    .chip:hover{border-color:var(--pr);color:var(--pr)}
-    .chip.on{background:var(--pr);color:var(--txi);border-color:var(--pr)}
-    table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums lining-nums}
-    th,td{padding:.85rem .75rem;border-bottom:1px solid var(--div);text-align:left;vertical-align:middle}
-    th{position:sticky;top:0;background:var(--surf);font-size:var(--text-xs);color:var(--txm);z-index:1;font-weight:600}
-    tbody tr{transition:background .12s}
-    tbody tr:hover{background:color-mix(in srgb,var(--pr) 5%,var(--surf))}
-    .table-wrap{overflow:auto;max-height:55dvh;border-radius:0 0 var(--r-xl) var(--r-xl)}
-    .badge{display:inline-flex;align-items:center;padding:.25rem .6rem;border-radius:999px;font-size:var(--text-xs);border:1px solid var(--brd);background:var(--surfoff);white-space:nowrap}
-    .bd{background:color-mix(in srgb,var(--err) 12%,var(--surf));color:var(--err);border-color:color-mix(in srgb,var(--err) 30%,var(--brd))}
-    .bw{background:color-mix(in srgb,var(--warn) 12%,var(--surf));color:var(--warn);border-color:color-mix(in srgb,var(--warn) 30%,var(--brd))}
-    .bo{background:color-mix(in srgb,var(--ok) 12%,var(--surf));color:var(--ok);border-color:color-mix(in srgb,var(--ok) 30%,var(--brd))}
-    .tags{display:flex;flex-wrap:wrap;gap:4px}
-    .tag{font-size:var(--text-xs);padding:.2rem .5rem;border-radius:999px;background:var(--surfoff);border:1px solid var(--brd)}
-    .muted{color:var(--txm)}.sm{font-size:var(--text-sm)}.fw7{font-weight:700}
-    .auth-box{background:var(--surfoff);border:1px solid var(--brd);border-radius:var(--r-lg);padding:var(--sp4);display:grid;gap:var(--sp3)}
-    .auth-row{display:flex;align-items:center;gap:var(--sp3);font-size:var(--text-sm)}
-    .dot{width:8px;height:8px;border-radius:50%;background:var(--txf);flex-shrink:0}
-    .dot.on{background:var(--ok)}
-    dialog{border:none;border-radius:var(--r-xl);padding:0;max-width:900px;width:min(95vw,900px);box-shadow:var(--sh-lg)}
-    dialog::backdrop{background:rgba(0,0,0,.4);backdrop-filter:blur(4px)}
-    .dlg{background:var(--surf);padding:var(--sp6);display:grid;gap:var(--sp5);border-radius:var(--r-xl)}
-    .dgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp4)}
-    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--sp8);color:var(--txm);gap:var(--sp4);text-align:center}
-    .empty svg{width:48px;height:48px;opacity:.35}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .spin{width:14px;height:14px;border:2px solid var(--brd);border-top-color:var(--pr);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
-    @media(max-width:1024px){.stats{grid-template-columns:repeat(2,1fr)}.fgrid{grid-template-columns:1fr 1fr}}
-    @media(max-width:768px){.app{grid-template-columns:1fr}.sidebar{display:none}.stats{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:540px){.stats{grid-template-columns:1fr}.fgrid{grid-template-columns:1fr}.dgrid{grid-template-columns:1fr 1fr}}
-    @media(max-width:420px){.dgrid{grid-template-columns:1fr}}
+    [data-theme="dark"] {
+      --bg: #1c1a15;
+      --surface: #2a2720;
+      --text: #ede6d5;
+      --text-secondary: #b7a68e;
+      --accent: #2aa18b;
+      --accent-hover: #218b77;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --border: #4a4235;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Satoshi', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background var(--transition), color var(--transition);
+    }
+    .app { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 300px; background: var(--surface); border-right: 1px solid var(--border);
+      padding: 20px; display: flex; flex-direction: column; gap: 24px;
+    }
+    .main { flex: 1; padding: 28px 32px; overflow-x: auto; }
+    button, .btn {
+      background: var(--accent); color: #fff; border: none; padding: 10px 18px;
+      border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem;
+      transition: background var(--transition);
+    }
+    button:hover { background: var(--accent-hover); }
+    button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    button.danger { background: var(--danger); }
+    input, select, textarea {
+      width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); color: var(--text); font-family: inherit; font-size: 0.9rem;
+      margin-bottom: 12px; transition: border var(--transition);
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+    .flex { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .grid { display: grid; gap: 16px; }
+    .stat-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+    .stat-value { font-size: 1.8rem; font-weight: 900; }
+    .stat-label { color: var(--text-secondary); font-size: 0.8rem; }
+    .chip { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; background: rgba(26,127,110,0.1); color: var(--accent); }
+    .urgent { background: rgba(185,28,28,0.1); color: var(--danger); }
+    .warning-chip { background: rgba(217,119,6,0.1); color: var(--warning); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-secondary); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; }
+    tr:hover td { background: rgba(0,0,0,0.02); }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;
+    }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-yellow { background: #fef3c7; color: #92400e; }
+    .badge-green { background: #d1fae5; color: #065f46; }
+    .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
+    .tab {
+      padding: 10px 24px; cursor: pointer; font-weight: 600; color: var(--text-secondary);
+      border-bottom: 2px solid transparent; transition: all var(--transition);
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .notification-count { background: var(--danger); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; }
+    @media (max-width: 1024px) {
+      .app { flex-direction: column; }
+      .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+    }
   </style>
 </head>
 <body>
-<div class="app">
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="logo">
-      <svg viewBox="0 0 64 64" fill="none" aria-label="Лого">
-        <rect x="8" y="10" width="48" height="44" rx="10" stroke="currentColor" stroke-width="4"/>
-        <path d="M20 24h24M20 34h24M20 44h14" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-      </svg>
-      <div>
-        <div>Реестр дел</div>
-        <div class="muted sm" style="font-weight:400">СК РФ · Контроль сроков</div>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="flex" style="justify-content: space-between;">
+        <h2 style="font-weight: 900;">Реестр дел</h2>
+        <button id="themeToggle" class="secondary" style="padding: 6px 12px;">☀/☾</button>
       </div>
-    </div>
-
-    <div class="auth-box">
-      <div class="auth-row"><div class="dot" id="aDot"></div><span id="aLabel">Гость — только просмотр</span></div>
-      <div id="loginArea" style="display:grid;gap:.5rem">
-        <input id="aEmail" type="email" placeholder="Email администратора">
-        <input id="aPass" type="password" placeholder="Пароль">
-        <button class="btn-p" onclick="doLogin()">Войти как администратор</button>
-        <div id="aErr" class="sm muted" style="display:none;color:var(--err)"></div>
+      <div class="grid stat-grid" id="stats"></div>
+      
+      <div id="urgentNotifications" class="card" style="padding:12px;">
+        <h3 style="margin-bottom: 8px;">🚨 Продление сроков</h3>
+        <div id="prolongationAlerts"></div>
       </div>
-      <button id="logoutBtn" class="btn-g" style="display:none" onclick="doLogout()">Выйти</button>
-    </div>
 
-    <div>
-      <div class="sm muted" style="margin-bottom:.5rem">Быстрые теги</div>
-      <div id="quickTags" class="chips"></div>
-    </div>
-
-    <div style="margin-top:auto">
-      <div class="sm muted" style="margin-bottom:.4rem">Срочные дела (≤ 7 дней)</div>
-      <div id="urgentList" class="sm"></div>
-    </div>
-  </aside>
-
-  <!-- MAIN -->
-  <main class="main">
-    <div class="topbar">
-      <div>
-        <div style="font-size:var(--text-xl);font-weight:700">Уголовные дела</div>
-        <div class="muted sm" id="syncStatus"><span class="spin"></span> Загрузка…</div>
+      <div id="urgentCasesSidebar" class="card" style="padding:12px;">
+        <h3 style="margin-bottom: 8px;">⏳ Срочные дела (мера ≤7 дн)</h3>
+        <div id="urgentCasesList"></div>
       </div>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-        <button class="btn-g" onclick="toggleTheme()">🌓 Тема</button>
-        <button class="btn-g" onclick="loadData()">↻ Обновить</button>
-        <button class="btn-p" id="addBtn" style="display:none" onclick="openAdd()">+ Добавить дело</button>
+
+      <div style="margin-top: auto; display: flex; gap: 8px; flex-direction: column;">
+        <button id="refreshBtn" class="secondary">↻ Обновить</button>
+        <button id="loginBtn">Войти как админ</button>
+        <button id="addCaseBtn" style="display: none;">+ Добавить дело</button>
+        <span id="userStatus" style="font-size:0.8rem; color: var(--text-secondary);"></span>
       </div>
-    </div>
+    </aside>
 
-    <div class="content">
-      <!-- STATS -->
-      <section class="stats">
-        <div class="panel stat"><div class="stat-k">Всего дел</div><div class="stat-v" id="sTotal">—</div></div>
-        <div class="panel stat"><div class="stat-k">Стража / дом. арест</div><div class="stat-v" id="sControl">—</div></div>
-        <div class="panel stat"><div class="stat-k">Срок ≤ 7 дней</div><div class="stat-v" id="sUrgent" style="color:var(--err)">—</div></div>
-        <div class="panel stat"><div class="stat-k">Следователей</div><div class="stat-v" id="sInvest">—</div></div>
-      </section>
+    <!-- Main -->
+    <main class="main">
+      <div class="tabs" id="mainTabs">
+        <div class="tab active" data-tab="cases">Дела</div>
+        <div class="tab" data-tab="archive">Архив</div>
+        <div class="tab" data-tab="announcements">Объявления</div>
+      </div>
 
-      <!-- FILTERS -->
-      <section class="panel filters">
-        <div class="fgrid">
-          <div><label>Поиск</label><input id="qSearch" placeholder="Номер, факт, статья, следователь…" oninput="render()"></div>
-          <div><label>Мера пресечения</label>
-            <select id="qMeasure" onchange="render()">
-              <option value="">Все</option>
-              <option value="стража">Под стражей</option>
-              <option value="домашний">Домашний арест</option>
-              <option value="подписка">Подписка</option>
-              <option value="без лица">Без меры</option>
-            </select>
-          </div>
-          <div><label>Тег</label><select id="qTag" onchange="onTagSelect()"><option value="">Все теги</option></select></div>
-          <div><label>Срок истекает</label>
-            <select id="qDl" onchange="render()">
-              <option value="">Любой</option>
-              <option value="0">Уже истёк</option>
-              <option value="7">До 7 дней</option>
-              <option value="14">До 14 дней</option>
-              <option value="30">До 30 дней</option>
-            </select>
-          </div>
-          <div style="display:flex;gap:.5rem;align-items:flex-end">
-            <button class="btn-g" onclick="resetF()">Сброс</button>
-          </div>
+      <!-- Панель дел -->
+      <div id="tabCases" class="tab-content">
+        <div class="flex" style="margin-bottom: 16px; gap:12px;">
+          <input type="text" id="searchInput" placeholder="Поиск по всем полям..." style="max-width: 400px;">
+          <select id="filterMeasure">
+            <option value="">Все меры</option>
+            <option value="стража">Стража</option>
+            <option value="домашний арест">Домашний арест</option>
+            <option value="подписка">Подписка</option>
+            <option value="без меры">Без меры</option>
+          </select>
+          <select id="filterUrgency">
+            <option value="">Все сроки</option>
+            <option value="expired">Истёк</option>
+            <option value="7">≤ 7 дней</option>
+            <option value="14">≤ 14 дней</option>
+            <option value="30">≤ 30 дней</option>
+          </select>
+          <button id="clearFilters" class="secondary">Сброс</button>
         </div>
-        <div>
-          <label>Активные теги</label>
-          <div id="tagChips" class="chips"></div>
-        </div>
-      </section>
-
-      <!-- TABLE -->
-      <section class="panel" style="overflow:hidden">
-        <div style="padding:1rem 1.25rem .4rem;font-weight:700;display:flex;justify-content:space-between;align-items:center">
-          <span id="tableTitle">Список дел</span>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Номер дела</th>
-                <th>По факту</th>
-                <th>Статья</th>
-                <th>Мера</th>
-                <th>Срок меры</th>
-                <th>Следователь</th>
-                <th>Теги</th>
-                <th id="actHead"></th>
-              </tr>
-            </thead>
-            <tbody id="tBody"></tbody>
-          </table>
-        </div>
-      </section>
-    </div>
-  </main>
-</div>
-
-<!-- DIALOG -->
-<dialog id="dlg">
-  <div class="dlg">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:var(--text-lg);font-weight:700" id="dlgTitle">Карточка дела</div>
-      <button class="btn-g" onclick="closeDlg()">✕</button>
-    </div>
-    <div class="dgrid">
-      <div><label>Номер дела *</label><input id="fNum"></div>
-      <div><label>По факту</label><input id="fFact"></div>
-      <div><label>Статья УК РФ</label><input id="fArt" placeholder="например: 105"></div>
-      <div><label>Мера пресечения</label><input id="fMeas" placeholder="стража / подписка / без лица"></div>
-      <div><label>Дата истечения меры</label><input id="fExp" type="date"></div>
-      <div><label>Следователь</label><input id="fInv"></div>
-      <div><label>Дата ВУД</label><input id="fVud" type="date"></div>
-      <div><label>Срок следствия до</label><input id="fUntil" type="date"></div>
-      <div><label>Выход на продление</label><input id="fExt" type="date"></div>
-      <div style="grid-column:1/-1"><label>Примечание</label><textarea id="fNotes" rows="2"></textarea></div>
-      <div style="grid-column:1/-1"><label>Теги (через запятую)</label><input id="fTags" placeholder="следователь, статья, категория…"></div>
-    </div>
-    <div style="display:flex;gap:.5rem;justify-content:space-between;flex-wrap:wrap">
-      <button class="btn-d" id="delBtn" style="display:none" onclick="delRecord()">Удалить дело</button>
-      <div style="display:flex;gap:.5rem;margin-left:auto">
-        <button class="btn-g" onclick="closeDlg()">Отмена</button>
-        <button class="btn-p" onclick="saveRecord()">Сохранить</button>
+        <div id="casesTableContainer" style="overflow-x: auto;"></div>
       </div>
-    </div>
-    <div id="dlgErr" class="sm" style="display:none;color:var(--err)"></div>
+
+      <!-- Панель архива -->
+      <div id="tabArchive" class="tab-content" style="display: none;">
+        <div class="flex" style="margin-bottom: 16px;">
+          <input type="text" id="archiveSearchInput" placeholder="Поиск по архиву..." style="max-width: 400px;">
+        </div>
+        <div id="archiveTableContainer" style="overflow-x: auto;"></div>
+      </div>
+
+      <!-- Панель объявлений -->
+      <div id="tabAnnouncements" class="tab-content" style="display: none;">
+        <div class="flex" style="justify-content: space-between; margin-bottom: 16px;">
+          <h2>Объявления и графики</h2>
+          <button id="addAnnouncementBtn" style="display: none;">+ Добавить объявление</button>
+        </div>
+        <div id="announcementsList"></div>
+      </div>
+    </main>
   </div>
-</dialog>
 
-<script>
-const SB_URL = 'https://qnqmpwmsqelmgkhyybxd.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFucW1wd21zcWVsbWdraHl5YnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MzgxNTEsImV4cCI6MjA5NDExNDE1MX0.ADsYUmVfH7DjdM9Yc01tPvB4HVOmsl0FkckaQlL7t4o';
-let token = SB_KEY;
-let isAdmin = false;
-let records = [];
-let editId = null;
-let activeTag = '';
+  <!-- Модалки -->
+  <div id="caseModal" class="card" style="position: fixed; top: 5%; left: 5%; right: 5%; bottom: 5%; z-index: 1000; overflow-y: auto; display: none;"></div>
+  <div id="announcementModal" class="card" style="position: fixed; top: 10%; left: 10%; right: 10%; max-height: 80%; z-index: 1000; overflow-y: auto; display: none;"></div>
 
-const $ = s => document.querySelector(s);
-const hdr = () => ({'apikey':SB_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'});
+  <script>
+    // ---------- SUPABASE ----------
+    const SUPABASE_URL = "https://qnqmpwmsqelmgkhyybxd.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFucW1wd21zcWVsbWdraHl5YnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MzgxNTEsImV4cCI6MjA5NDExNDE1MX0.ADsYUmVfH7DjdM9Yc01tPvB4HVOmsl0FkckaQlL7t4o";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// AUTH
-async function doLogin(){
-  const email=$('#aEmail').value.trim(), pass=$('#aPass').value;
-  if(!email||!pass) return;
-  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`,{
-    method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
-    body:JSON.stringify({email,password:pass})
-  });
-  const d = await r.json();
-  if(d.access_token){
-    token = d.access_token; isAdmin = true;
-    $('#aDot').classList.add('on');
-    $('#aLabel').textContent = '✓ Администратор';
-    $('#loginArea').style.display = 'none';
-    $('#logoutBtn').style.display = 'block';
-    $('#addBtn').style.display = '';
-    $('#actHead').textContent = '';
-    $('#aErr').style.display = 'none';
-    loadData();
-  } else {
-    $('#aErr').textContent = 'Неверный email или пароль';
-    $('#aErr').style.display = 'block';
-  }
-}
-function doLogout(){
-  token=SB_KEY; isAdmin=false;
-  $('#aDot').classList.remove('on');
-  $('#aLabel').textContent = 'Гость — только просмотр';
-  $('#loginArea').style.display = 'grid';
-  $('#logoutBtn').style.display = 'none';
-  $('#addBtn').style.display = 'none';
-  $('#actHead').textContent = '';
-  loadData();
-}
+    // ---------- GLOBAL STATE ----------
+    let currentUser = null;
+    let casesData = [];
+    let filteredCases = [];
+    let activeTab = 'cases'; // cases, archive, announcements
+    let editingCaseId = null;
 
-// DATA
-async function loadData(){
-  $('#syncStatus').innerHTML = '<span class="spin"></span> Загрузка…';
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/cases?select=*&order=created_at.desc`, {headers:hdr()});
-    if(!r.ok) throw new Error(await r.text());
-    records = await r.json();
-    const t = new Date().toLocaleTimeString('ru');
-    $('#syncStatus').textContent = `${records.length} дел · обновлено в ${t}`;
-    render();
-  } catch(e){
-    $('#syncStatus').textContent = 'Ошибка: ' + e.message;
-  }
-}
-
-// UTILS
-const norm = v => (v||'').toString().toLowerCase().trim();
-function daysLeft(v){
-  if(!v) return null;
-  const d=new Date(v), n=new Date();
-  n.setHours(0,0,0,0); d.setHours(0,0,0,0);
-  return Math.round((d-n)/86400000);
-}
-function sbadge(exp){
-  const d=daysLeft(exp);
-  if(d===null) return '<span class="badge">нет срока</span>';
-  if(d<0) return '<span class="badge bd">истекло '+Math.abs(d)+' дн. назад</span>';
-  if(d===0) return '<span class="badge bd">истекает сегодня</span>';
-  if(d<=7) return `<span class="badge bd">${d} дн.</span>`;
-  if(d<=14) return `<span class="badge bw">${d} дн.</span>`;
-  return `<span class="badge bo">${d} дн.</span>`;
-}
-function fdate(v){ if(!v) return ''; const d=new Date(v); return isNaN(d)?v:d.toLocaleDateString('ru'); }
-function allTags(){ return [...new Set(records.flatMap(r=>r.tags||[]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')); }
-
-function fillTags(){
-  const tags=allTags();
-  $('#qTag').innerHTML='<option value="">Все теги</option>'+tags.map(t=>`<option value="${t}">${t}</option>`).join('');
-  const mkChips=(el,list)=>{ el.innerHTML=list.map(t=>`<button class="chip ${activeTag===t?'on':''}" onclick="setTag(this,'${t.replace(/'/g,"\'")}')"> ${t}</button>`).join(''); };
-  mkChips($('#quickTags'), tags.slice(0,20));
-  mkChips($('#tagChips'), tags);
-}
-function setTag(btn,t){ activeTag=activeTag===t?'':t; $('#qTag').value=activeTag; render(); }
-function onTagSelect(){ activeTag=$('#qTag').value; render(); }
-
-function filtered(){
-  const q=norm($('#qSearch').value), m=norm($('#qMeasure').value), tg=norm(activeTag), dl=$('#qDl').value;
-  return records.filter(r=>{
-    const hay=[r.case_number,r.fact,r.article,r.measure,r.investigator,(r.tags||[]).join(' ')].join('|').toLowerCase();
-    if(q && !hay.includes(q)) return false;
-    if(m && !norm(r.measure).includes(m)) return false;
-    if(tg && !(r.tags||[]).map(norm).includes(tg)) return false;
-    if(dl){
-      const d=daysLeft(r.measure_expiry);
-      if(dl==='0'){ if(d===null||d>=0) return false; }
-      else { if(d===null||d>Number(dl)||d<0) return false; }
+    // ---------- UTILS ----------
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'});
     }
-    return true;
-  });
-}
 
-function render(){
-  fillTags();
-  const data=filtered();
-  $('#tableTitle').textContent=`Список дел (${data.length})`;
-  $('#sTotal').textContent=data.length;
-  $('#sControl').textContent=data.filter(r=>/страж|домашн/i.test(r.measure||'')).length;
-  const urgent=data.filter(r=>{const d=daysLeft(r.measure_expiry);return d!==null&&d>=0&&d<=7;});
-  $('#sUrgent').textContent=urgent.length;
-  $('#sInvest').textContent=new Set(data.map(r=>r.investigator).filter(Boolean)).size;
+    function daysUntil(dateStr) {
+      if (!dateStr) return Infinity;
+      const now = new Date(); now.setHours(0,0,0,0);
+      const target = new Date(dateStr);
+      const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+      return diff;
+    }
 
-  // Urgent sidebar list
-  $('#urgentList').innerHTML = urgent.length
-    ? urgent.map(r=>`<div style="padding:.3rem 0;border-bottom:1px solid var(--div)"><div class="fw7 sm">${r.case_number}</div><div class="muted" style="font-size:var(--text-xs)">${r.fact||''} · ${sbadge(r.measure_expiry)}</div></div>`).join('')
-    : '<div class="muted" style="font-size:var(--text-xs)">Срочных дел нет</div>';
+    function monthsUntil(dateStr) {
+      if (!dateStr) return '';
+      const now = new Date();
+      const target = new Date(dateStr);
+      let months = (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth());
+      if (target.getDate() < now.getDate()) months--;
+      return months > 0 ? `${months} мес` : (months === 0 ? 'меньше месяца' : 'истёк');
+    }
 
-  if(!data.length){
-    $('#tBody').innerHTML=`<tr><td colspan="8"><div class="empty"><svg fill="none" viewBox="0 0 64 64"><rect x="12" y="8" width="40" height="48" rx="8" stroke="currentColor" stroke-width="3"/><path d="M22 22h20M22 32h20M22 42h12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><div>Дел не найдено</div>${records.length===0&&isAdmin?'<button class="btn-p" onclick="openAdd()">+ Добавить первое дело</button>':''}</div></td></tr>`;
-    return;
-  }
-  $('#tBody').innerHTML=data.map(r=>`<tr>
-    <td><div class="fw7">${r.case_number||'—'}</div><div class="muted sm">${fdate(r.date_initiated)}</div></td>
-    <td class="sm">${r.fact||''}</td>
-    <td>${r.article?'ст. '+r.article:''}</td>
-    <td><span class="badge">${r.measure||'—'}</span></td>
-    <td><div class="sm">${fdate(r.measure_expiry)||'—'}</div><div style="margin-top:3px">${sbadge(r.measure_expiry)}</div></td>
-    <td class="sm">${r.investigator||'—'}</td>
-    <td><div class="tags">${(r.tags||[]).slice(0,4).map(t=>`<span class="tag">${t}</span>`).join('')}</div></td>
-    <td>${isAdmin?`<button class="btn-g" style="padding:.35rem .7rem;font-size:var(--text-xs)" onclick="openEdit('${r.id}')">Открыть</button>`:''}</td>
-  </tr>`).join('');
-}
+    // Проверка необходимости продления следствия
+    function checkProlongation(c) {
+      const invDate = c.investigation_until;
+      if (!invDate) return null;
+      const days = daysUntil(invDate);
+      const measure = (c.measure || '').toLowerCase();
+      const isStrict = measure.includes('страж') || measure.includes('домашний арест');
+      const threshold = isStrict ? 15 : 10;
+      if (days >= 0 && days <= threshold) {
+        return { type: 'следствие', daysLeft: days, threshold };
+      }
+      return null;
+    }
 
-function resetF(){ $('#qSearch').value=''; $('#qMeasure').value=''; $('#qTag').value=''; $('#qDl').value=''; activeTag=''; render(); }
+    function checkMeasureProlongation(c) {
+      const expDate = c.measure_expiry;
+      if (!expDate) return null;
+      const days = daysUntil(expDate);
+      if (days >= 0 && days <= 7) {
+        return { type: 'мера', daysLeft: days };
+      }
+      return null;
+    }
 
-// DIALOG
-function clearDlg(){ ['#fNum','#fFact','#fArt','#fMeas','#fExp','#fInv','#fVud','#fUntil','#fExt','#fNotes','#fTags'].forEach(s=>$(s).value=''); $('#dlgErr').style.display='none'; }
-function closeDlg(){ document.getElementById('dlg').close(); }
-function openAdd(){ clearDlg(); editId=null; $('#dlgTitle').textContent='Новое дело'; $('#delBtn').style.display='none'; document.getElementById('dlg').showModal(); }
-function openEdit(id){
-  const r=records.find(x=>x.id===id); if(!r) return;
-  editId=id;
-  $('#fNum').value=r.case_number||''; $('#fFact').value=r.fact||''; $('#fArt').value=r.article||''; $('#fMeas').value=r.measure||''; $('#fExp').value=r.measure_expiry||''; $('#fInv').value=r.investigator||''; $('#fVud').value=r.date_initiated||''; $('#fUntil').value=r.investigation_until||''; $('#fExt').value=r.extension_date||''; $('#fNotes').value=r.notes||''; $('#fTags').value=(r.tags||[]).join(', ');
-  $('#dlgTitle').textContent='Карточка дела';
-  $('#delBtn').style.display='';
-  $('#dlgErr').style.display='none';
-  document.getElementById('dlg').showModal();
-}
-async function saveRecord(){
-  const cn=$('#fNum').value.trim();
-  if(!cn){ $('#dlgErr').textContent='Заполните номер дела'; $('#dlgErr').style.display='block'; return; }
-  const body={
-    case_number:cn, fact:$('#fFact').value.trim()||null, article:$('#fArt').value.trim()||null, measure:$('#fMeas').value.trim()||null,
-    measure_expiry:$('#fExp').value||null, investigator:$('#fInv').value.trim()||null, date_initiated:$('#fVud').value||null,
-    investigation_until:$('#fUntil').value||null, extension_date:$('#fExt').value||null, notes:$('#fNotes').value.trim()||null,
-    tags:$('#fTags').value.split(',').map(s=>s.trim()).filter(Boolean), updated_at:new Date().toISOString()
-  };
-  let res;
-  if(editId) res=await fetch(`${SB_URL}/rest/v1/cases?id=eq.${editId}`,{method:'PATCH',headers:hdr(),body:JSON.stringify(body)});
-  else res=await fetch(`${SB_URL}/rest/v1/cases`,{method:'POST',headers:hdr(),body:JSON.stringify(body)});
-  if(res.ok||res.status===201){ closeDlg(); loadData(); }
-  else { const e=await res.text(); $('#dlgErr').textContent='Ошибка сохранения: '+e; $('#dlgErr').style.display='block'; }
-}
-async function delRecord(){
-  if(!editId||!confirm('Удалить это дело из реестра?')) return;
-  const res=await fetch(`${SB_URL}/rest/v1/cases?id=eq.${editId}`,{method:'DELETE',headers:hdr()});
-  if(res.ok){ closeDlg(); loadData(); }
-}
-function toggleTheme(){ const r=document.documentElement; r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'; }
+    function getUrgencyClass(c) {
+      const days = daysUntil(c.measure_expiry);
+      if (days < 0) return 'badge-red';
+      if (days <= 7) return 'badge-red';
+      if (days <= 14) return 'badge-yellow';
+      return 'badge-green';
+    }
 
-loadData();
-</script>
+    // ---------- AUTH ----------
+    async function checkUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      currentUser = user;
+      document.getElementById('loginBtn').textContent = user ? 'Выйти' : 'Войти как админ';
+      document.getElementById('addCaseBtn').style.display = user ? 'inline-block' : 'none';
+      document.getElementById('addAnnouncementBtn').style.display = user ? 'inline-block' : 'none';
+      document.getElementById('userStatus').textContent = user ? `Вы: ${user.email}` : '';
+      await loadCases();
+      await loadAnnouncements();
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      if (currentUser) {
+        await supabase.auth.signOut();
+        currentUser = null;
+        checkUser();
+        return;
+      }
+      const email = prompt('Email:');
+      const password = prompt('Пароль:');
+      if (!email || !password) return;
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) alert('Ошибка входа: ' + error.message);
+      else checkUser();
+    });
+
+    // ---------- LOAD DATA ----------
+    async function loadCases() {
+      let query = supabase.from('cases').select('*');
+      if (activeTab === 'cases') query = query.eq('archived', false);
+      else if (activeTab === 'archive') query = query.eq('archived', true);
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (error) { console.error(error); return; }
+      casesData = data || [];
+      applyFilters();
+      updateStatsAndUrgent();
+    }
+
+    function applyFilters() {
+      const searchTerm = (document.getElementById(activeTab === 'archive' ? 'archiveSearchInput' : 'searchInput')?.value || '').toLowerCase();
+      const measureFilter = document.getElementById('filterMeasure')?.value || '';
+      const urgencyFilter = document.getElementById('filterUrgency')?.value || '';
+
+      filteredCases = casesData.filter(c => {
+        // search
+        if (searchTerm) {
+          const inFields = [c.case_number, c.fact, c.article, c.investigator, c.defendant, ...(c.tags||[])].join(' ').toLowerCase();
+          if (!inFields.includes(searchTerm)) return false;
+        }
+        if (measureFilter && c.measure !== measureFilter) return false;
+        if (urgencyFilter) {
+          const days = daysUntil(c.measure_expiry);
+          if (urgencyFilter === 'expired' && days >= 0) return false;
+          if (urgencyFilter === '7' && (days < 0 || days > 7)) return false;
+          if (urgencyFilter === '14' && (days < 0 || days > 14)) return false;
+          if (urgencyFilter === '30' && (days < 0 || days > 30)) return false;
+        }
+        return true;
+      });
+      renderTable(activeTab === 'archive' ? 'archiveTableContainer' : 'casesTableContainer', filteredCases);
+    }
+
+    function renderTable(containerId, data) {
+      const container = document.getElementById(containerId);
+      if (data.length === 0) {
+        container.innerHTML = '<p>Нет данных</p>';
+        return;
+      }
+      let html = `<table><thead><tr>
+        <th>№ дела</th><th>Обвиняемый</th><th>Факт</th><th>Статья</th><th>Мера</th><th>Срок меры</th>
+        <th>Следствие до</th><th>Ост. время</th><th>Следователь</th><th>Теги</th><th>Действия</th>
+      </tr></thead><tbody>`;
+      data.forEach(c => {
+        const invUntil = c.investigation_until ? formatDate(c.investigation_until) : '';
+        const invDays = daysUntil(c.investigation_until);
+        const invMonths = monthsUntil(c.investigation_until);
+        const urgencyClass = getUrgencyClass(c);
+        const prolongInv = checkProlongation(c);
+        const prolongMeas = checkMeasureProlongation(c);
+        const urgencyNote = [
+          prolongInv ? `🔔 Продл. след.: ${prolongInv.daysLeft} дн.` : '',
+          prolongMeas ? `⏰ Продл. меры: ${prolongMeas.daysLeft} дн.` : ''
+        ].filter(Boolean).join('<br>');
+        html += `<tr>
+          <td><strong>${c.case_number || ''}</strong></td>
+          <td>${c.defendant || ''}</td>
+          <td>${c.fact || ''}</td>
+          <td>${c.article || ''}</td>
+          <td>${c.measure || ''}</td>
+          <td><span class="badge ${urgencyClass}">${c.measure_expiry ? formatDate(c.measure_expiry) : ''}</span></td>
+          <td>${invUntil}</td>
+          <td>${invUntil ? `${invDays > 0 ? invDays + ' дн' : (invDays < 0 ? 'истёк' : 'сегодня')} / ${invMonths}` : ''}</td>
+          <td>${c.investigator || ''}</td>
+          <td>${(c.tags || []).map(t => `<span class="chip">${t}</span>`).join(' ')}</td>
+          <td>${urgencyNote}<br>${currentUser ? `<button onclick="openEditModal('${c.id}')">Открыть</button>` : ''}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function updateStatsAndUrgent() {
+      // stats for active cases only (non-archived) - используем casesData уже отфильтрованные по activeTab
+      const activeCases = casesData.filter(c => !c.archived);
+      document.getElementById('stats').innerHTML = `
+        <div class="card"><div class="stat-value">${activeCases.length}</div><div class="stat-label">всего дел</div></div>
+        <div class="card"><div class="stat-value">${activeCases.filter(c => (c.measure||'').includes('страж')||(c.measure||'').includes('дом')).length}</div><div class="stat-label">под стражей/дом.арест</div></div>
+        <div class="card"><div class="stat-value">${activeCases.filter(c => daysUntil(c.measure_expiry)>=0 && daysUntil(c.measure_expiry)<=7).length}</div><div class="stat-label">срок ≤7 дн</div></div>
+        <div class="card"><div class="stat-value">${new Set(activeCases.map(c=>c.investigator).filter(Boolean)).size}</div><div class="stat-label">следователей</div></div>
+      `;
+
+      // Urgent sidebar
+      const urgent = activeCases.filter(c => daysUntil(c.measure_expiry)>=0 && daysUntil(c.measure_expiry)<=7);
+      document.getElementById('urgentCasesList').innerHTML = urgent.length ? urgent.map(c => 
+        `<div style="margin-bottom:6px;"><strong>${c.case_number}</strong> – ${c.defendant||c.fact||''} (${formatDate(c.measure_expiry)})</div>`
+      ).join('') : '<div style="color: var(--text-secondary);">Нет срочных</div>';
+
+      // Prolongation alerts
+      const prolongAlerts = [];
+      activeCases.forEach(c => {
+        const inv = checkProlongation(c);
+        const mes = checkMeasureProlongation(c);
+        if (inv) prolongAlerts.push({case: c, ...inv});
+        if (mes) prolongAlerts.push({case: c, ...mes});
+      });
+      const alertHtml = prolongAlerts.length ? prolongAlerts.map(a => 
+        `<div style="margin-bottom:6px;"><span class="badge badge-red">!</span> <strong>${a.case.case_number}</strong> – ${a.type === 'следствие' ? 'Следствие' : 'Мера'} через ${a.daysLeft} дн.</div>`
+      ).join('') : '<div style="color: var(--text-secondary);">Нет уведомлений</div>';
+      document.getElementById('prolongationAlerts').innerHTML = alertHtml;
+
+      // Notification count on tab maybe
+      const totalAlerts = prolongAlerts.length;
+      document.querySelector('.tab[data-tab="cases"]').innerHTML = `Дела ${totalAlerts ? `<span class="notification-count">${totalAlerts}</span>` : ''}`;
+    }
+
+    // ---------- MODAL FOR CASE ----------
+    async function openEditModal(caseId) {
+      if (!currentUser) return;
+      const c = casesData.find(c => c.id === caseId) || {};
+      editingCaseId = caseId;
+      const modal = document.getElementById('caseModal');
+      modal.style.display = 'block';
+      modal.innerHTML = `
+        <h2>${caseId ? 'Редактировать' : 'Новое'} дело</h2>
+        <label>Номер дела</label><input id="editCaseNumber" value="${c.case_number || ''}">
+        <label>Обвиняемый</label><input id="editDefendant" value="${c.defendant || ''}">
+        <label>Факт</label><input id="editFact" value="${c.fact || ''}">
+        <label>Статья</label><input id="editArticle" value="${c.article || ''}">
+        <label>Мера пресечения</label>
+        <select id="editMeasure">
+          <option ${c.measure==='стража'?'selected':''}>стража</option>
+          <option ${c.measure==='домашний арест'?'selected':''}>домашний арест</option>
+          <option ${c.measure==='подписка'?'selected':''}>подписка</option>
+          <option ${c.measure==='без меры'?'selected':''}>без меры</option>
+        </select>
+        <label>Дата истечения меры</label><input type="date" id="editMeasureExpiry" value="${c.measure_expiry || ''}">
+        <label>Дата ВУД</label><input type="date" id="editDateInitiated" value="${c.date_initiated || ''}">
+        <label>Срок следствия до</label><input type="date" id="editInvestigationUntil" value="${c.investigation_until || ''}">
+        <label>Дата выхода на продление</label><input type="date" id="editExtensionDate" value="${c.extension_date || ''}">
+        <label>Следователь</label><input id="editInvestigator" value="${c.investigator || ''}">
+        <label>Теги (через запятую)</label><input id="editTags" value="${(c.tags || []).join(', ')}">
+        <label>Примечание</label><textarea id="editNotes">${c.notes || ''}</textarea>
+        <label><input type="checkbox" id="editArchived" ${c.archived ? 'checked' : ''}> Архивировать дело</label>
+        <div class="flex" style="margin-top:16px; justify-content: flex-end;">
+          <button class="secondary" onclick="document.getElementById('caseModal').style.display='none'">Отмена</button>
+          <button class="danger" onclick="deleteCase('${caseId}')">Удалить</button>
+          <button onclick="saveCase()">Сохранить</button>
+        </div>
+      `;
+    }
+
+    async function saveCase() {
+      const data = {
+        case_number: document.getElementById('editCaseNumber').value,
+        defendant: document.getElementById('editDefendant').value,
+        fact: document.getElementById('editFact').value,
+        article: document.getElementById('editArticle').value,
+        measure: document.getElementById('editMeasure').value,
+        measure_expiry: document.getElementById('editMeasureExpiry').value || null,
+        date_initiated: document.getElementById('editDateInitiated').value || null,
+        investigation_until: document.getElementById('editInvestigationUntil').value || null,
+        extension_date: document.getElementById('editExtensionDate').value || null,
+        investigator: document.getElementById('editInvestigator').value,
+        tags: document.getElementById('editTags').value.split(',').map(t => t.trim()).filter(Boolean),
+        notes: document.getElementById('editNotes').value,
+        archived: document.getElementById('editArchived').checked
+      };
+      let error;
+      if (editingCaseId) {
+        ({ error } = await supabase.from('cases').update(data).eq('id', editingCaseId));
+      } else {
+        ({ error } = await supabase.from('cases').insert([data]));
+      }
+      if (error) alert(error.message);
+      else {
+        document.getElementById('caseModal').style.display = 'none';
+        await loadCases();
+      }
+    }
+
+    async function deleteCase(id) {
+      if (!confirm('Удалить дело?')) return;
+      const { error } = await supabase.from('cases').delete().eq('id', id);
+      if (error) alert(error.message);
+      else {
+        document.getElementById('caseModal').style.display = 'none';
+        await loadCases();
+      }
+    }
+
+    document.getElementById('addCaseBtn').addEventListener('click', () => openEditModal(null));
+
+    // ---------- ANNOUNCEMENTS ----------
+    async function loadAnnouncements() {
+      const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
+      const list = document.getElementById('announcementsList');
+      if (!data || data.length === 0) {
+        list.innerHTML = '<p>Нет объявлений</p>';
+        return;
+      }
+      list.innerHTML = data.map(a => `
+        <div class="card flex" style="justify-content: space-between; align-items: center;">
+          <div>
+            <strong>${a.title}</strong>
+            <p style="color: var(--text-secondary);">${a.description || ''}</p>
+            <small>${new Date(a.created_at).toLocaleString('ru-RU')}</small>
+          </div>
+          <div>
+            ${a.file_url ? `<a href="${a.file_url}" target="_blank" class="btn secondary">📄 PDF</a>` : ''}
+            ${currentUser ? `<button class="danger" onclick="deleteAnnouncement('${a.id}')">Удалить</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function deleteAnnouncement(id) {
+      if (!confirm('Удалить объявление?')) return;
+      await supabase.from('announcements').delete().eq('id', id);
+      loadAnnouncements();
+    }
+
+    document.getElementById('addAnnouncementBtn').addEventListener('click', async () => {
+      const modal = document.getElementById('announcementModal');
+      modal.style.display = 'block';
+      modal.innerHTML = `
+        <h2>Новое объявление</h2>
+        <label>Название</label><input id="annTitle">
+        <label>Описание</label><textarea id="annDesc"></textarea>
+        <label>PDF файл</label><input type="file" id="annFile" accept=".pdf">
+        <div class="flex" style="margin-top:12px; justify-content: flex-end;">
+          <button class="secondary" onclick="document.getElementById('announcementModal').style.display='none'">Отмена</button>
+          <button onclick="uploadAnnouncement()">Загрузить</button>
+        </div>
+      `;
+    });
+
+    async function uploadAnnouncement() {
+      const title = document.getElementById('annTitle').value;
+      const desc = document.getElementById('annDesc').value;
+      const fileInput = document.getElementById('annFile');
+      const file = fileInput.files[0];
+      if (!title) { alert('Введите название'); return; }
+      let fileUrl = null;
+      if (file) {
+        const fileName = `${Date.now()}_${file.name}`;
+        const { data, error } = await supabase.storage.from('announcements').upload(fileName, file);
+        if (error) { alert('Ошибка загрузки файла: ' + error.message); return; }
+        const { data: publicUrlData } = supabase.storage.from('announcements').getPublicUrl(fileName);
+        fileUrl = publicUrlData.publicUrl;
+      }
+      await supabase.from('announcements').insert([{ title, description: desc, file_url: fileUrl }]);
+      document.getElementById('announcementModal').style.display = 'none';
+      loadAnnouncements();
+    }
+
+    // ---------- TABS ----------
+    document.getElementById('mainTabs').addEventListener('click', (e) => {
+      if (e.target.classList.contains('tab')) {
+        const tab = e.target.dataset.tab;
+        activeTab = tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        document.getElementById('tabCases').style.display = tab === 'cases' ? 'block' : 'none';
+        document.getElementById('tabArchive').style.display = tab === 'archive' ? 'block' : 'none';
+        document.getElementById('tabAnnouncements').style.display = tab === 'announcements' ? 'block' : 'none';
+        if (tab === 'cases' || tab === 'archive') loadCases();
+        if (tab === 'announcements') loadAnnouncements();
+      }
+    });
+
+    // ---------- FILTERS ----------
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('filterMeasure').addEventListener('change', applyFilters);
+    document.getElementById('filterUrgency').addEventListener('change', applyFilters);
+    document.getElementById('archiveSearchInput').addEventListener('input', applyFilters);
+    document.getElementById('clearFilters').addEventListener('click', () => {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('filterMeasure').value = '';
+      document.getElementById('filterUrgency').value = '';
+      applyFilters();
+    });
+
+    // ---------- THEME ----------
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+    });
+
+    // ---------- REFRESH ----------
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+      loadCases();
+    });
+
+    // ---------- INIT ----------
+    checkUser();
+  </script>
 </body>
 </html>
